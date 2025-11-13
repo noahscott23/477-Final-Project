@@ -1,4 +1,15 @@
 # 477 Final Project
+---
+## Group Members
+Names: Megan, Noah, Archie 
+---
+## Project Proposal 
+**[Google Docs Link](https://docs.google.com/document/d/17RK5K5ksrlHTo8y_4_nGwVojnewG0qcpVxPnVVN2wEs/edit?usp=sharing)**
+---
+## Stage of Development 
+Oct --> project brainstorming + proposal composition 
+Nov --> designing + prototyping 
+---
 
 This is an [Observable Framework](https://observablehq.com/framework/) app. To install the required dependencies, run:
 
@@ -18,21 +29,33 @@ For more, see <https://observablehq.com/framework/getting-started>.
 
 ## Project structure
 
-A typical Framework project looks like this:
-
 ```ini
 .
 ├─ src
-│  ├─ components
-│  │  └─ timeline.js           # an importable module
 │  ├─ data
-│  │  ├─ launches.csv.js       # a data loader
-│  │  └─ events.json           # a static data file
-│  ├─ example-dashboard.md     # a page
-│  ├─ example-report.md        # another page
-│  └─ index.md                 # the home page
+│  │  ├─ processed/            # transformed datasets used in visualizations
+│  │  │  ├─ us_coastal_cities.csv
+│  │  │  ├─ us_projections.json
+│  │  │  └─ us-states-10m.json
+│  │  ├─ raw/                  # original downloaded datasets
+│  │  │  ├─ locations.lst
+│  │  │  └─ ar6-regional-confidence/
+│  │  ├─ archived/             # historical datasets not currently used
+│  │  └─ README.md             # data documentation
+│  ├─ scripts
+│  │  ├─ extract_us_projections.py  # data processing script
+│  │  └─ README.md
+│  ├─ pages
+│  │  ├─ sea-level-rise.md          # main visualization page
+│  │  ├─ data-documentation.md      # technical documentation
+│  │  └─ README.md
+│  ├─ docs
+│  │  └─ project_proposal.md        # original project proposal
+│  ├─ components/                   # reusable JS modules
+│  ├─ index.md                      # home page
+│  └─ observable.png                # favicon
 ├─ .gitignore
-├─ observablehq.config.js      # the app config file
+├─ observablehq.config.js           # app config file
 ├─ package.json
 └─ README.md
 ```
