@@ -1,4 +1,4 @@
-# 🌊 Climate Change + Projected Sea Level Rise
+# Climate Change + Projected Sea Level Rise
 
 **Team:** Megan Fung, Noah Scott, Archie Phyo  
 **Course:** CSC-477 Information Visualization  
