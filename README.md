@@ -1,15 +1,5 @@
 # 477 Final Project
 ---
-## Group Members
-Names: Megan, Noah, Archie 
----
-## Project Proposal 
-**[Google Docs Link](https://docs.google.com/document/d/17RK5K5ksrlHTo8y_4_nGwVojnewG0qcpVxPnVVN2wEs/edit?usp=sharing)**
----
-## Stage of Development 
-Oct --> project brainstorming + proposal composition 
-Nov --> designing + prototyping 
----
 
 This is an [Observable Framework](https://observablehq.com/framework/) app. To install the required dependencies, run:
 
