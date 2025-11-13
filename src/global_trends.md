@@ -15,3 +15,5 @@ display(Inputs.table(data.slice(0, 20)));
 
 // loading data from csv
 
+
+
