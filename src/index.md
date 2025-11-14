@@ -1,6 +1,4 @@
----
-toc: false
----
+# Climate Change + Projected Sea Level Rise
 
 <div class="hero">
   <h1>Sea Level Rise & US Coastal Cities</h1>
@@ -149,3 +147,7 @@ This visualization helps answer:
 }
 
 </style>
+**Team:** Megan Fung, Noah Scott, Archie Phyo  
+**Course:** CSC-477 Information Visualization  
+
+This interactive dashboard visualizes projected sea-level rise from NASA’s IPCC AR6 dataset under different greenhouse-gas emission scenarios.
