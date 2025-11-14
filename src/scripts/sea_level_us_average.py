@@ -74,5 +74,5 @@ out = pd.DataFrame({
 # ------------------------------------------------------
 # 5. Save output
 # ------------------------------------------------------
-out.to_csv("us_sea_level_average.csv", index=False)
+out.to_csv("../data/processed/us_sea_level_average.csv", index=False)
 print("\nSAVED: us_sea_level_average.csv")

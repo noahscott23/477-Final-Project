@@ -13,7 +13,7 @@ Use the controls to compare emission scenarios, drag the year marker, and explor
 
 ```js
 // load averaged U.S. projection dataset
-const usAvg = await FileAttachment("../data/us_sea_level_average.csv").csv({ typed: true });
+const usAvg = await FileAttachment("../data/processed/us_sea_level_average.csv").csv({ typed: true });
 
 // clean numeric values
 usAvg.forEach(d => {
