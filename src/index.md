@@ -7,6 +7,11 @@
   <a href="/pages/sea-level-rise" class="cta-button">Jump to Visualization →</a>
 </div>
 
+<div class="hero">
+  <a href="/pages/sea-level-over-time" class="cta-button" style="margin-top:1rem;">
+    U.S. Sea Level Projections (Line Graph) →
+  </a>
+</div>
 ---
 
 ## Project Overview
