@@ -4,6 +4,5 @@ node_modules/
 yarn-error.log
 src/data/archived/
 src/data/raw/
-src/data/README.md
 src/pages/README.md
 src/scripts/README.md
