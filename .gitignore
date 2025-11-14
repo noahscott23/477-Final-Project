@@ -2,6 +2,7 @@
 /dist/
 node_modules/
 yarn-error.log
-data/
+src/data/archived/
+src/data/raw/
 src/pages/README.md
 src/scripts/README.md
