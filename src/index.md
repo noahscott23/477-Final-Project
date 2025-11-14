@@ -4,14 +4,12 @@
   <h1>Sea Level Rise & US Coastal Cities</h1>
   <h2>Visualizing the Future Impact of Climate Change</h2>
   <p class="subtitle">Explore how projected sea level rise will affect 153 US coastal cities under different greenhouse gas emission scenarios through 2150.</p>
-  <a href="/pages/sea-level-rise" class="cta-button">Jump to Visualization →</a>
+  <div class="button-group">
+    <a href="/pages/sea-level-rise" class="cta-button">Map View: Sea Level Rise → </a>
+    <a href="/pages/sea-level-over-time" class="cta-button">Line Graph: Sea Level Projections → </a>
+  </div>
 </div>
 
-<div class="hero">
-  <a href="/pages/sea-level-over-time" class="cta-button" style="margin-top:1rem;">
-    U.S. Sea Level Projections (Line Graph) →
-  </a>
-</div>
 ---
 
 ## Project Overview
