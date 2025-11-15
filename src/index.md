@@ -46,6 +46,27 @@ This visualization helps answer:
 
 ---
 
+## Outline of Final Submission
+
+Our final project will be presented as a single page that combines all visual components and explanations in a cohesive layout.
+
+- **Introduction Section**  
+  A short article-style overview introducing the issue of climate-driven sea level rise, our motivation, and the dataset we used. This section will provide context for readers before they explore the visualizations.
+
+- **Interactive Visualizations (Top of Page)**  
+  The first part of the page will feature our two main interactive graphs:  
+  - **U.S. Map Visualization:** Displays projected sea level rise for 153 coastal cities under different emission scenarios.  
+  - **Line Graph Visualization:** Shows long-term sea level projections (2020–2150) under multiple SSP scenarios for selected regions or cities.  
+
+- **Analysis and Discussion**  
+  Following the visuals, we’ll include brief explanatory text highlighting key takeaways, comparisons between emission pathways, and geographic patterns of vulnerability.
+
+- **Data Documentation and References (Bottom of Page)**  
+  The end of the page will include a concise summary of our data sources, preprocessing steps, and full references to the IPCC AR6 and NASA JPL datasets.
+
+This structure ensures a smooth narrative flow — readers start with the interactive exploration, then move toward interpretation, data transparency, and references.
+
+
 ## Team
 
 **Team Members:** Megan Fung, Noah Scott, Archie Phyo  
