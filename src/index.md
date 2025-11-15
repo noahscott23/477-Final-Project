@@ -71,7 +71,7 @@ This structure ensures a smooth narrative flow — readers start with the intera
 
 **Team Members:** Megan Fung, Noah Scott, Archie Phyo  
 **Course:** CSC-477 Information Visualization  
-**Institution:** University of Victoria
+**Institution:** California Polytechnic State University- San Luis Obispo
 
 ---
 
