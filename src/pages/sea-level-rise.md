@@ -266,14 +266,23 @@ function createUSMap(cities, {width} = {}) {
 
 ---
 
-
-
 **Primary Data:** [IPCC AR6 Sea Level Projections](https://doi.org/10.5281/zenodo.5914709) via NASA/JPL  
 **Location Data:** Permanent Service for Mean Sea Level (PSMSL) tide gauge network  
 **Cartography:** US Atlas TopoJSON from Observable
 
 ---
 
+## Future Implementations
+
+- **Interactive Zoom & Pan:** Enable users to zoom into specific coastal regions and focus on individual cities
+- **Multi-Scenario Comparison:** Side-by-side map views to compare different emission scenarios simultaneously
+- **City Search & Filtering:** Add search functionality and filters by state, risk level, or population size to focus on specific locations
+- **Historical Data Integration:** Overlay actual historical sea level measurements from tide gauges (1900-2023) to show observed trends alongside projections
+- **Export & Share:** Enable users to download maps as images or generate shareable links with specific scenario/year configurations
+
+---
+
+## Citations/ References 
 
 **IPCC Chapter:**
 Fox-Kemper, B., H.T. Hewitt, C. Xiao, G. Aðalgeirsdóttir, S.S. Drijfhout, T.L. Edwards, N.R. Golledge, M. Hemer, R.E. Kopp, G. Krinner, A. Mix, D. Notz, S. Nowicki, I.S. Nurhati, L. Ruiz, J.-B. Sallée, A.B.A. Slangen, and Y. Yu, 2021: Ocean, Cryosphere and Sea Level Change. In *Climate Change 2021: The Physical Science Basis. Contribution of Working Group I to the Sixth Assessment Report of the Intergovernmental Panel on Climate Change* [Masson-Delmotte, V., P. Zhai, A. Pirani, et al. (eds.)]. Cambridge University Press, pp. 1211–1362, [doi:10.1017/9781009157896.011](https://doi.org/10.1017/9781009157896.011)
