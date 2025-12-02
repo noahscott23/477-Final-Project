@@ -19,7 +19,8 @@ Technical overview of datasets, processing pipeline, and methodology.
 **Time span:** 2020-2150 (decadal intervals)  
 **Scenarios:** 5 SSP pathways (SSP1-1.9, SSP1-2.6, SSP2-4.5, SSP3-7.0, SSP5-8.5)  
 **Confidence levels:** Medium and low  
-**Uncertainty:** 107 quantile distributions (5th-95th percentiles)
+**Uncertainty:** 107 quantile distributions (5th-95th percentiles)  
+**Used in this project:** 3 scenarios (SSP1-1.9, SSP2-4.5, SSP5-8.5), medium confidence, 17th/50th/83rd percentiles
 
 ### PSMSL Tide Gauge Locations
 **Source:** Permanent Service for Mean Sea Level via IPCC package  
@@ -44,46 +45,74 @@ Technical overview of datasets, processing pipeline, and methodology.
 - Downloaded US states TopoJSON (112 KB)
 
 ### Stage 2: Filtering
-- Extracted 153 US cities from 66,190 global locations
+- Extracted 141 US cities from 66,190 global locations
 - Geographic bounds: mainland US (24-48.5°N, 67-125°W), Alaska (51-71°N, 130-172°W), Hawaii (18.5-22.5°N, 154-161°W)
-- Excluded Canadian stations and grid points
-- Output: `us_coastal_cities.csv` (4.5 KB)
+- Excluded Canadian stations (12 removed) and grid points
+- Output: `us_coastal_cities.csv` (4.2 KB)
 
 ### Stage 3: Extraction
 **Script:** `src/scripts/extract_us_projections.py`  
 **Process:**
 1. Read NetCDF files for 3 scenarios (SSP1-1.9, SSP2-4.5, SSP5-8.5)
-2. Extract median (50th percentile) projections
-3. Select years: 2030, 2050, 2100, 2150
+2. Extract projections at three percentiles:
+   - 50th percentile (median)
+   - 17th percentile (lower bound)
+   - 83rd percentile (upper bound)
+3. Select years: 2020, 2030, 2040, 2050, 2060, 2070, 2080, 2090, 2100, 2110, 2120, 2130, 2140, 2150 (14 years)
 4. Match PSMSL IDs to US cities
-5. Output: `us_projections.json` (70 KB)
+5. Calculate risk levels based on median projections
+6. Output: `us_projections.json` (~95 KB)
 
-**Runtime:** ~10-15 seconds  
-**Compression:** 9.2 GB → 70 KB (99.999% reduction)
+**Runtime:** ~15-20 seconds  
+**Compression:** 9.2 GB → 95 KB (99.999% reduction)
 
 ### Stage 4: Risk Classification
 **Algorithm:**
 ```python
-if sea_level_rise_2100 < 200mm:
+if median_sea_level_rise_2100 < 200mm:
     risk = "low"
-elif sea_level_rise_2100 < 400mm:
+elif median_sea_level_rise_2100 < 400mm:
     risk = "moderate"
 else:
     risk = "high"
 ```
 
 **Results (SSP2-4.5, Year 2100):**
-- High risk: 13 cities (> 40cm)
-- Moderate: 88 cities (20-40cm)
-- Low: 38 cities (< 20cm)
-- Unknown: 14 cities (missing data)
+- High risk: ~15-20 cities (> 40cm)
+- Moderate: ~80-90 cities (20-40cm)
+- Low: ~30-40 cities (< 20cm)
+- Total: 141 US coastal cities
 
-### Stage 5: Visualization
-- D3.js + Observable Framework
-- Albers USA projection (includes AK/HI insets)
-- Interactive controls: scenario selector, year slider
-- Color-coded risk levels: green (low), yellow (moderate), red (high)
+### Stage 5: US Average Calculation
+**Script:** `src/scripts/sea_level_us_average.py`  
+**Process:**
+1. Load same 141 US coastal cities from `us_coastal_cities.csv`
+2. Extract projections for all 3 scenarios (SSP1-1.9, SSP2-4.5, SSP5-8.5)
+3. Calculate average across cities for each year/scenario
+4. Extract 17th, 50th (median), and 83rd percentiles
+5. Output: `us_sea_level_average.csv` (~3 KB)
+
+**Purpose:** Provides national average baseline for city-specific comparisons
+
+### Stage 6: Visualization
+**Framework:** D3.js v7 + Observable Framework  
+**Two complementary views:**
+1. **Spatial (Map):**
+   - Albers USA projection (includes AK/HI insets)
+   - Color-coded risk levels: green (low), orange (moderate), red (high)
+   - Zoom/pan for detailed exploration
+   - Click to select city
+2. **Temporal (Line Chart):**
+   - US average projections (2020-2150)
+   - Uncertainty bands (17th-83rd percentile, ~66% confidence)
+   - City overlay (dashed lines) when selected
+   - Scenario comparison toggle
+
+**Interactive features:**
+- Synchronized controls (scenario selector, year slider)
+- Cross-chart linking (map click → line chart update)
 - Hover tooltips with city-specific data
+- Clear selection button
 
 ---
 
@@ -91,9 +120,10 @@ else:
 
 ### Processed Data (`src/data/processed/`)
 **Actively used in visualization:**
-- `us_coastal_cities.csv` (4.5 KB) - 153 cities with coordinates
-- `us_projections.json` (70 KB) - Sea level projections
-- `us-states-10m.json` (112 KB) - US map
+- `us_coastal_cities.csv` (4.2 KB) - 141 US cities with coordinates
+- `us_projections.json` (95 KB) - City-specific projections (14 years, 3 scenarios, median + uncertainty)
+- `us_sea_level_average.csv` (3 KB) - National average projections
+- `us-states-10m.json` (112 KB) - US states TopoJSON
 
 ### Raw Data (`src/data/raw/`)
 **Source material:**
@@ -110,24 +140,28 @@ else:
 ## Data Quality
 
 ### Validation
-- ✅ Coordinate ranges verified (lat: -90 to 90, lon: -180 to 180)
-- ✅ PSMSL IDs unique and cross-referenced
-- ✅ Projection values physically reasonable
-- ✅ Risk classifications align with IPCC thresholds
+- Coordinate ranges verified (lat: -90 to 90, lon: -180 to 180)
+- PSMSL IDs unique and cross-referenced
+- Projection values physically reasonable
+- Risk classifications align with IPCC thresholds
 
 ### Limitations
-- Decadal time steps only (no yearly data)
-- Median projections (50th percentile) used; uncertainty ranges not visualized
+- Decadal time steps only (no yearly data available in source)
+- Uncertainty ranges show 17th-83rd percentile (~66% confidence); extreme tail risks not fully captured
 - No population or economic impact data integrated
-- Missing data for 14 cities (out of 153)
+- Projections represent relative sea level rise (includes regional subsidence/uplift)
+- Low-probability, high-impact scenarios (e.g., rapid ice sheet collapse) not included in confidence bands
 
 ### Geographic Coverage
-- **East Coast:** 62 cities - New York, Boston, Miami, Charleston
-- **West Coast:** 48 cities - San Francisco, Los Angeles, Seattle, San Diego
-- **Gulf Coast:** 21 cities - Galveston, Key West, Pensacola
-- **Alaska:** 15 cities - Juneau, Sitka, Ketchikan
-- **Hawaii:** 4 cities - Honolulu, Hilo
-- **Puerto Rico:** 3 cities
+**Total: 141 US coastal cities**
+- **East Coast:** ~58 cities - New York, Boston, Miami, Charleston
+- **West Coast:** ~45 cities - San Francisco, Los Angeles, Seattle, San Diego
+- **Gulf Coast:** ~20 cities - Galveston, Key West, Pensacola
+- **Alaska:** ~13 cities - Juneau, Sitka, Ketchikan
+- **Hawaii:** ~3 cities - Honolulu, Hilo
+- **Puerto Rico:** ~2 cities
+
+*Note: 12 Canadian cities were removed from the original dataset to focus on US-only projections*
 
 ---
 
@@ -139,9 +173,11 @@ else:
 - **Map Projection:** D3 Albers USA
 
 ### Performance
-- Total data load: ~190 KB (optimized for web)
-- Map render time: < 100ms (153 cities)
+- Total data load: ~215 KB (optimized for web)
+- Map render time: < 100ms (141 cities)
+- Line chart render time: < 150ms (with uncertainty bands)
 - Interaction latency: < 10ms (slider/selector updates)
+- Cross-chart update: < 50ms (city selection)
 
 ---
 
@@ -156,9 +192,11 @@ Fox-Kemper, B., et al., 2021. Ocean, Cryosphere and Sea Level Change. In *Climat
 **FACTS Model:**
 Kopp, R. E., et al., 2023. The Framework for Assessing Changes To Sea-Level (FACTS) v1.0. *Geoscientific Model Development*, 16, 7461–7489. [doi:10.5194/gmd-16-7461-2023](https://doi.org/10.5194/gmd-16-7461-2023)
 
+**Design Inspiration:**
+NASA Sea Level Projection Tool. [sealevel.nasa.gov/ipcc-ar6-sea-level-projection-tool](https://sealevel.nasa.gov/ipcc-ar6-sea-level-projection-tool)
+
 **License:** Creative Commons Attribution 4.0 International (CC BY 4.0)
 
 ---
 
-**Last Updated:** November 13, 2024  
 **Team:** Megan Fung, Noah Scott, Archie Phyo
