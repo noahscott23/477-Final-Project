@@ -46,10 +46,10 @@ const selectedScenario = view(
 
 ```js
 
-// year slider (controls the vertical marker + summary cards)
+// projection horizon: controls how far solid lines extend
 const selectedYear = view(
   Inputs.range([2020, 2150], {
-    label: "Year",
+    label: "Projection horizon (year revealed)",
     step: 10,
     value: 2100
   })
@@ -99,7 +99,7 @@ const currentPoint = getYearPoint(usAvg, selectedYear);
   <div class="card">
     <h2>📅 Selected Year</h2>
     <span class="big">${selectedYear}</span>
-    <p class="label">time marker on the curve</p>
+    <p class="label">projection horizon (solid line)</p>
   </div>
   <div class="card">
     <h2>🌊 Sea Level Rise</h2>
@@ -213,7 +213,7 @@ function seaLevelLineChart(
     .attr("transform", `translate(${margin.left},0)`)
     .call(yAxis);
 
-  // Axis labels
+  // axis labels
   svg
     .append("text")
     .attr("x", width / 2)
@@ -231,7 +231,7 @@ function seaLevelLineChart(
     .attr("font-size", 12)
     .text("Sea Level Rise (mm)");
 
-  // --- LINES FOR EACH SCENARIO ---
+  // --- LINES FOR EACH SCENARIO (solid up to horizon, dashed beyond) ---
   const scenarios = [
     { key: "ssp119_mm", color: "#22c55e" },
     { key: "ssp245_mm", color: "#fbbf24" },
@@ -247,27 +247,46 @@ function seaLevelLineChart(
   const linesGroup = svg.append("g");
 
   scenarios.forEach(s => {
-    const path = linesGroup
-      .append("path")
-      .datum(data)
-      .attr("fill", "none")
-      .attr("stroke", s.color)
-      .attr("stroke-width", s.key === selectedScenario.value ? 3.5 : 2)
-      .attr("opacity", s.key === selectedScenario.value ? 1 : 0.45)
-      .attr("d", lineGen(s.key));
+    const dataPast = data.filter(d => d.year <= selectedYear);
+    const dataFuture = data.filter(d => d.year >= selectedYear);
 
-    // Simple draw animation when button is clicked
-    const totalLength = path.node().getTotalLength();
-    path
-      .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
-      .attr("stroke-dashoffset", totalLength)
-      .transition()
-      .duration(900)
-      .ease(d3.easeCubicOut)
-      .attr("stroke-dashoffset", 0);
+    // solid segment up to projection horizon
+    if (dataPast.length >= 2) {
+      const pathPast = linesGroup
+        .append("path")
+        .datum(dataPast)
+        .attr("fill", "none")
+        .attr("stroke", s.color)
+        .attr("stroke-width", s.key === selectedScenario.value ? 3.5 : 2.5)
+        .attr("opacity", s.key === selectedScenario.value ? 1 : 0.7)
+        .attr("d", lineGen(s.key));
+
+      // draw animation for solid part
+      const totalLengthPast = pathPast.node().getTotalLength();
+      pathPast
+        .attr("stroke-dasharray", `${totalLengthPast} ${totalLengthPast}`)
+        .attr("stroke-dashoffset", totalLengthPast)
+        .transition()
+        .duration(900)
+        .ease(d3.easeCubicOut)
+        .attr("stroke-dashoffset", 0);
+    }
+
+    // dashed segment beyond projection horizon
+    if (dataFuture.length >= 2) {
+      const pathFuture = linesGroup
+        .append("path")
+        .datum(dataFuture)
+        .attr("fill", "none")
+        .attr("stroke", s.color)
+        .attr("stroke-width", s.key === selectedScenario.value ? 3 : 2)
+        .attr("opacity", s.key === selectedScenario.value ? 0.7 : 0.4)
+        .attr("stroke-dasharray", "5 5")
+        .attr("d", lineGen(s.key));
+    }
   });
 
-  // --- VERTICAL TIME MARKER (driven by slider year) ---
+  // --- VERTICAL TIME MARKER (follows hover, resets to horizon on mouseleave) ---
   const marker = svg
     .append("line")
     .attr("stroke", "#2563eb")
@@ -313,14 +332,14 @@ function seaLevelLineChart(
       const pt = getYearPoint(data, clamped);
       if (!pt) return;
 
-      // Marker follows mouse (acts like a draggable time marker)
+      // marker follows mouse (acts like a draggable time marker)
       marker.attr("x1", x(clamped)).attr("x2", x(clamped));
 
       const scenarioLabel = selectedScenario.label;
       const valueMm = pt[selectedScenario.value];
       const valueCm = valueMm / 10;
 
-      // Approximate rate of change (forward difference)
+      // approximate rate of change (forward difference)
       const nextPt = getYearPoint(data, clamped + 10) || pt;
       const slopeMmPerDecade = nextPt[selectedScenario.value] - pt[selectedScenario.value];
 
@@ -336,11 +355,11 @@ function seaLevelLineChart(
     })
     .on("mouseleave", function() {
       hideTooltip();
-      // Reset marker to the slider-selected year
+      // reset marker to the slider-selected horizon
       marker.attr("x1", x(selectedYear)).attr("x2", x(selectedYear));
     });
 
-  // --- EVENT MARKERS (only on their specified scenario line) ---
+  // --- EVENT THRESHOLDS (horizontal lines + marker) ---
   const eventGroup = svg.append("g");
 
   events.forEach(ev => {
@@ -353,20 +372,32 @@ function seaLevelLineChart(
     const ex = x(ev.year);
     const ey = y(yVal);
 
-    // Little diamond marker
+    // horizontal threshold line across the chart
     eventGroup
-      .append("rect")
-      .attr("x", ex - 5)
-      .attr("y", ey - 5)
-      .attr("width", 10)
-      .attr("height", 10)
-      .attr("transform", `rotate(45,${ex},${ey})`)
+      .append("line")
+      .attr("x1", margin.left)
+      .attr("x2", width - margin.right)
+      .attr("y1", ey)
+      .attr("y2", ey)
+      .attr("stroke", "#ea580c")
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", "4 4")
+      .attr("opacity", 0.75);
+
+    // small circle at the scenario intersection
+    const markerCircle = eventGroup
+      .append("circle")
+      .attr("cx", ex)
+      .attr("cy", ey)
+      .attr("r", 4)
       .attr("fill", "#ea580c")
       .attr("stroke", "white")
       .attr("stroke-width", 1.2)
-      .style("cursor", "pointer")
+      .style("cursor", "pointer");
+
+    // interaction on the circle (line is just visual)
+    markerCircle
       .on("mouseover", function(event) {
-        // prevent the overlay's mousemove from immediately overwriting text
         event.stopPropagation();
         showTooltip(
           `
@@ -396,7 +427,7 @@ function seaLevelLineChart(
   // --- SIMPLE LEGEND ---
   const legend = svg
     .append("g")
-    .attr("transform", `translate(${width - margin.right - 140}, ${margin.top})`);
+    .attr("transform", `translate(${width - margin.right - 160}, ${margin.top})`);
 
   scenarios.forEach((s, i) => {
     const row = legend.append("g").attr("transform", `translate(0, ${i * 18})`);
