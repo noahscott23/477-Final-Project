@@ -8,8 +8,7 @@ export default {
   // lets you organize them into sections and have unlisted pages.
   pages: [
     {name: "Sea Level Rise Visualization", path: "/pages/sea-level-visualization"},
-    // {name: "Map View (Legacy)", path: "/pages/sea-level-rise"},
-    //{name: "Line Graph (Legacy)", path: "/pages/sea-level-over-time"},
+    {name: "Line Bar Graph", path: "/pages/sea-level-over-time"},
     {name: "Data Documentation", path: "/pages/data-documentation"}
   ],
 
