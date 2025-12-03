@@ -3,6 +3,6 @@
 node_modules/
 yarn-error.log
 src/data/archived/
-src/data/raw/locations.lst
+src/data/raw/
 src/pages/README.md
 src/scripts/README.md

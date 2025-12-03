@@ -12,22 +12,22 @@ from pathlib import Path
 from netCDF4 import Dataset
 import numpy as np
 
-# Configuration
+# config
 SCRIPT_DIR = Path(__file__).parent
 DATA_DIR = SCRIPT_DIR.parent / "data"
-NETCDF_BASE = DATA_DIR / "raw/ar6-regional-confidence/regional/confidence_output_files/medium_confidence"
+NETCDF_BASE = DATA_DIR / "raw/medium_confidence"
 US_CITIES_FILE = DATA_DIR / "processed/us_coastal_cities.csv"
 OUTPUT_FILE = DATA_DIR / "processed/us_projections.json"
 
-# Scenarios to extract (focus on 3 key scenarios)
+# scenarios
 SCENARIOS = {
     "ssp119": "Low Emissions (SSP1-1.9)",
     "ssp245": "Moderate Emissions (SSP2-4.5)",
     "ssp585": "High Emissions (SSP5-8.5)"
 }
 
-# Years to extract (subset for visualization)
-TARGET_YEARS = [2030, 2050, 2100, 2150]
+# years (separated by 10 years)
+TARGET_YEARS = [2020, 2030, 2040, 2050, 2060, 2070, 2080, 2090, 2100, 2110, 2120, 2130, 2140, 2150]
 
 
 def load_us_cities():
@@ -47,9 +47,8 @@ def load_us_cities():
 
 
 def extract_projections_for_scenario(scenario, us_cities):
-    """Extract sea level projections for all US cities for a given scenario."""
+    """Extract sea level projections with uncertainty for all US cities for a given scenario."""
     
-    # Open NetCDF file for this scenario
     nc_file = NETCDF_BASE / scenario / f"total_{scenario}_medium_confidence_values.nc"
     
     if not nc_file.exists():
@@ -59,20 +58,20 @@ def extract_projections_for_scenario(scenario, us_cities):
     print(f"\nProcessing {scenario}...")
     ds = Dataset(nc_file, 'r')
     
-    # Get arrays
     locations = ds.variables['locations'][:]
     years = ds.variables['years'][:]
     quantiles = ds.variables['quantiles'][:]
     sea_level_change = ds.variables['sea_level_change'][:]  # (quantiles, years, locations)
     
-    # Find median quantile index (50th percentile)
+    # Find indices for 17th, 50th (median), and 83rd percentiles
+    p17_idx = np.argmin(np.abs(quantiles - 0.17))
     median_idx = np.argmin(np.abs(quantiles - 0.5))
-    print(f"  Using quantile: {quantiles[median_idx]:.2f} (index {median_idx})")
+    p83_idx = np.argmin(np.abs(quantiles - 0.83))
     
-    # Build index lookup for PSMSL IDs
+    print(f"  Using quantiles: 17th={quantiles[p17_idx]:.2f}, 50th={quantiles[median_idx]:.2f}, 83rd={quantiles[p83_idx]:.2f}")
+    
     location_index = {psmsl_id: idx for idx, psmsl_id in enumerate(locations)}
     
-    # Extract data for each US city
     projections = {}
     found_count = 0
     
@@ -84,43 +83,53 @@ def extract_projections_for_scenario(scenario, us_cities):
         loc_idx = location_index[psmsl_id]
         city_data = {}
         
-        # Extract for target years
         for target_year in TARGET_YEARS:
-            # Find closest year in dataset
             year_idx = np.argmin(np.abs(years - target_year))
             actual_year = int(years[year_idx])
             
-            # Get sea level change (in mm)
-            value = sea_level_change[median_idx, year_idx, loc_idx]
+            # Extract median, lower, and upper bounds
+            median_value = sea_level_change[median_idx, year_idx, loc_idx]
+            lower_value = sea_level_change[p17_idx, year_idx, loc_idx]
+            upper_value = sea_level_change[p83_idx, year_idx, loc_idx]
             
             # Handle masked values (missing data)
-            if np.ma.is_masked(value):
+            if np.ma.is_masked(median_value):
                 city_data[str(actual_year)] = None
             else:
-                city_data[str(actual_year)] = int(value)
+                city_data[str(actual_year)] = {
+                    "median": int(median_value),
+                    "lower": int(lower_value) if not np.ma.is_masked(lower_value) else int(median_value),
+                    "upper": int(upper_value) if not np.ma.is_masked(upper_value) else int(median_value)
+                }
         
         projections[str(psmsl_id)] = city_data
         found_count += 1
     
     ds.close()
-    print(f"  Extracted data for {found_count}/{len(us_cities)} cities")
+    print(f"  Extracted data for {found_count}/{len(us_cities)} cities with uncertainty bounds")
     
     return projections
 
 
 def calculate_risk_level(projections_2100):
-    """Calculate risk level based on 2100 projection."""
-    # Handle missing data
+    """Calculate risk level based on 2100 median projection."""
+
+    # missing data
     if projections_2100 is None:
         return "unknown"
     
-    # Thresholds in mm
+    # Extract median value (now data is a dict with median/lower/upper)
+    median_value = projections_2100.get("median") if isinstance(projections_2100, dict) else projections_2100
+    
+    if median_value is None:
+        return "unknown"
+    
     LOW_THRESHOLD = 200     # < 20 cm
     MODERATE_THRESHOLD = 400  # < 40 cm
     
-    if projections_2100 < LOW_THRESHOLD:
+    if median_value < LOW_THRESHOLD:
         return "low"
-    elif projections_2100 < MODERATE_THRESHOLD:
+    elif median_value < MODERATE_THRESHOLD:
         return "moderate"
     else:
         return "high"
@@ -132,20 +141,18 @@ def main():
     print("IPCC AR6 Sea Level Projections - US Cities Extraction")
     print("=" * 60)
     
-    # Load US cities
+    # load cities
     us_cities = load_us_cities()
     
-    # Extract projections for each scenario
+    # get projections for scenarios 
     all_data = {}
     
     for scenario_id, scenario_name in SCENARIOS.items():
         scenario_projections = extract_projections_for_scenario(scenario_id, us_cities)
         
-        # Add to combined dataset
         for psmsl_id, city_info in us_cities.items():
             psmsl_str = str(psmsl_id)
             
-            # Initialize city entry if not exists
             if psmsl_str not in all_data:
                 all_data[psmsl_str] = {
                     'name': city_info['name'],
@@ -154,11 +161,9 @@ def main():
                     'projections': {}
                 }
             
-            # Add scenario data if available
             if psmsl_str in scenario_projections:
                 all_data[psmsl_str]['projections'][scenario_id] = scenario_projections[psmsl_str]
     
-    # Calculate risk levels based on SSP2-4.5 2100 projections
     print("\nCalculating risk levels...")
     risk_counts = {'low': 0, 'moderate': 0, 'high': 0, 'unknown': 0}
     
@@ -178,29 +183,35 @@ def main():
     if risk_counts['unknown'] > 0:
         print(f"  Unknown/Missing data: {risk_counts['unknown']} cities")
     
-    # Write output JSON
     print(f"\nWriting output to {OUTPUT_FILE}...")
     with open(OUTPUT_FILE, 'w') as f:
         json.dump(all_data, f, indent=2)
     
-    # Calculate file size
     file_size_kb = OUTPUT_FILE.stat().st_size / 1024
     print(f"  File size: {file_size_kb:.1f} KB")
     
     print("\n" + "=" * 60)
     print("Extraction complete!")
     print("=" * 60)
+    print(f"  {len(all_data)} cities × {len(SCENARIOS)} scenarios × {len(TARGET_YEARS)} years")
+    print(f"  Each projection includes: median, lower (17th %), upper (83rd %)")
     
-    # Print sample data for verification
-    sample_cities = ['10', '12', '235']  # San Francisco, New York, Boston
-    print("\nSample data (SSP2-4.5, Year 2100):")
+    sample_cities = ['10', '12', '235']  
+    print("\nSample data (SSP2-4.5, Year 2100 with uncertainty):")
     for psmsl_id in sample_cities:
         if psmsl_id in all_data:
             city = all_data[psmsl_id]
             if 'ssp245' in city['projections'] and '2100' in city['projections']['ssp245']:
-                value_mm = city['projections']['ssp245']['2100']
-                value_cm = value_mm / 10
-                print(f"  {city['name']:20s}: {value_cm:5.1f} cm ({city['risk_level']})")
+                proj = city['projections']['ssp245']['2100']
+                if isinstance(proj, dict):
+                    median_cm = proj['median'] / 10
+                    lower_cm = proj['lower'] / 10
+                    upper_cm = proj['upper'] / 10
+                    print(f"  {city['name']:20s}: {median_cm:5.1f} cm ({lower_cm:5.1f}–{upper_cm:5.1f} cm) [{city['risk_level']}]")
+                else:
+                    # Fallback for old format
+                    value_cm = proj / 10
+                    print(f"  {city['name']:20s}: {value_cm:5.1f} cm ({city['risk_level']})")
 
 
 if __name__ == '__main__':
