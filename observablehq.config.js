@@ -7,8 +7,9 @@ export default {
   // all pages will be listed in alphabetical order. Listing pages explicitly
   // lets you organize them into sections and have unlisted pages.
   pages: [
-    {name: "Map View: Sea Level Rise", path: "/pages/sea-level-rise"},
-    {name: "Line Graph: Sea Level Projections", path: "/pages/sea-level-over-time"},
+    {name: "Sea Level Rise Visualization", path: "/pages/sea-level-visualization"},
+    // {name: "Map View (Legacy)", path: "/pages/sea-level-rise"},
+    //{name: "Line Graph (Legacy)", path: "/pages/sea-level-over-time"},
     {name: "Data Documentation", path: "/pages/data-documentation"}
   ],
 
