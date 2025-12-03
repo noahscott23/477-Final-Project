@@ -131,9 +131,10 @@ const selectedScenario = view(
 // If coming from map, use that year; otherwise show full range (2150)
 const defaultYear = urlYear ? parseInt(urlYear) : 2150;
 
+// projection horizon: controls how far solid lines extend
 const selectedYear = view(
   Inputs.range([2020, 2150], {
-    label: "Display data up to year:",
+    label: "Projection horizon (year revealed)",
     step: 10,
     value: defaultYear
   })
@@ -192,7 +193,7 @@ function getYearPoint(data, year) {
   <div class="card">
     <h2>📅 Year Range</h2>
     <span class="big">${selectedYear}</span>
-    <p class="label">showing 2020 → ${selectedYear}</p>
+    <p class="label">projection horizon (solid line)</p>
   </div>
   <div class="card">
     <h2>🌊 ${selectedCity ? selectedCity.name : 'US Average'}</h2>
@@ -346,7 +347,7 @@ function seaLevelLineChart(
     .attr("transform", `translate(${margin.left},0)`)
     .call(yAxis);
 
-  // Axis labels
+  // axis labels
   svg
     .append("text")
     .attr("x", width / 2)
@@ -364,29 +365,11 @@ function seaLevelLineChart(
     .attr("font-size", 12)
     .text("Sea Level Rise (mm)");
 
-  // --- UNCERTAINTY BANDS & LINES FOR EACH SCENARIO ---
-  const allScenarios = [
-    { 
-      key: "ssp119_mm", 
-      lower: "ssp119_lower",
-      upper: "ssp119_upper",
-      label: "Low (SSP1-1.9)", 
-      color: "#22c55e" 
-    },
-    { 
-      key: "ssp245_mm", 
-      lower: "ssp245_lower",
-      upper: "ssp245_upper",
-      label: "Moderate (SSP2-4.5)", 
-      color: "#fbbf24" 
-    },
-    { 
-      key: "ssp585_mm", 
-      lower: "ssp585_lower",
-      upper: "ssp585_upper",
-      label: "High (SSP5-8.5)", 
-      color: "#ef4444" 
-    }
+  // --- LINES FOR EACH SCENARIO (solid up to horizon, dashed beyond) ---
+  const scenarios = [
+    { key: "ssp119_mm", color: "#22c55e" },
+    { key: "ssp245_mm", color: "#fbbf24" },
+    { key: "ssp585_mm", color: "#ef4444" }
   ];
 
   // Filter scenarios based on selection
@@ -425,70 +408,48 @@ function seaLevelLineChart(
   });
 
   scenarios.forEach(s => {
-    const path = linesGroup
-      .append("path")
-      .datum(filteredData)
-      .attr("fill", "none")
-      .attr("stroke", s.color)
-      .attr("stroke-width", 3)
-      .attr("opacity", 1)
-      .attr("d", lineGen(s.key));
+    const dataPast = data.filter(d => d.year <= selectedYear);
+    const dataFuture = data.filter(d => d.year >= selectedYear);
 
-    // Simple draw animation
-    const totalLength = path.node().getTotalLength();
-    path
-      .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
-      .attr("stroke-dashoffset", totalLength)
-      .transition()
-      .duration(900)
-      .ease(d3.easeCubicOut)
-      .attr("stroke-dashoffset", 0);
-  });
-
-  // --- CITY OVERLAY LINES & UNCERTAINTY (if city is selected) ---
-  if (filteredCityData && filteredCityData.length > 0) {
-    const cityUncertaintyGroup = svg.append("g").attr("class", "city-uncertainty-bands");
-    const cityLinesGroup = svg.append("g").attr("class", "city-lines");
-    
-    // Draw city uncertainty bands first
-    scenarios.forEach(s => {
-      cityUncertaintyGroup
+    // solid segment up to projection horizon
+    if (dataPast.length >= 2) {
+      const pathPast = linesGroup
         .append("path")
-        .datum(filteredCityData)
-        .attr("fill", s.color)
-        .attr("opacity", 0.08)  // More subtle for city (behind both US and city lines)
-        .attr("d", areaGen(s.lower, s.upper))
-        .append("title")
-        .text(`${cityData.name} ${s.label} uncertainty range`);
-    });
-    
-    // Then draw city median lines (dashed)
-    scenarios.forEach(s => {
-      const cityPath = cityLinesGroup
-        .append("path")
-        .datum(filteredCityData)
+        .datum(dataPast)
         .attr("fill", "none")
         .attr("stroke", s.color)
-        .attr("stroke-width", 3.5)
-        .attr("opacity", 0.8)
+        .attr("stroke-width", s.key === selectedScenario.value ? 3.5 : 2.5)
+        .attr("opacity", s.key === selectedScenario.value ? 1 : 0.7)
         .attr("d", lineGen(s.key));
 
-      // Apply dashed style with animation
-      const totalLength = cityPath.node().getTotalLength();
-      cityPath
-        .attr("stroke-dasharray", `8 4 ${totalLength}`)
-        .attr("stroke-dashoffset", totalLength)
+      // draw animation for solid part
+      const totalLengthPast = pathPast.node().getTotalLength();
+      pathPast
+        .attr("stroke-dasharray", `${totalLengthPast} ${totalLengthPast}`)
+        .attr("stroke-dashoffset", totalLengthPast)
         .transition()
-        .delay(400)
-        .duration(1200)
+        .duration(900)
         .ease(d3.easeCubicOut)
-        .attr("stroke-dasharray", "8 4")
         .attr("stroke-dashoffset", 0);
-    });
-  }
+    }
 
-  // --- VERTICAL TIME MARKER (draggable within filtered range) ---
-  const marker = svg.append("line")
+    // dashed segment beyond projection horizon
+    if (dataFuture.length >= 2) {
+      const pathFuture = linesGroup
+        .append("path")
+        .datum(dataFuture)
+        .attr("fill", "none")
+        .attr("stroke", s.color)
+        .attr("stroke-width", s.key === selectedScenario.value ? 3 : 2)
+        .attr("opacity", s.key === selectedScenario.value ? 0.7 : 0.4)
+        .attr("stroke-dasharray", "5 5")
+        .attr("d", lineGen(s.key));
+    }
+  });
+
+  // --- VERTICAL TIME MARKER (follows hover, resets to horizon on mouseleave) ---
+  const marker = svg
+    .append("line")
     .attr("stroke", "#2563eb")
     .attr("stroke-width", 2)
     .attr("stroke-dasharray", "4 2")
@@ -518,92 +479,49 @@ function seaLevelLineChart(
     tooltip.style("opacity", 0);
   }
 
-  // --- INTERACTION OVERLAY (hover along curve with draggable marker) ---
-  // Only add if we have scenarios to show
-  if (scenarios.length > 0) {
-    svg
-      .append("rect")
-      .attr("x", margin.left)
-      .attr("y", margin.top)
-      .attr("width", width - margin.left - margin.right)
-      .attr("height", height - margin.top - margin.bottom)
-      .attr("fill", "transparent")
-      .on("mousemove", function(event) {
-        const [mx] = d3.pointer(event, this);
-        const year = Math.round(x.invert(mx));
-        const clamped = Math.max(minYear, Math.min(maxYear, year));
-        const pt = getYearPoint(filteredData, clamped);
-        if (!pt) return;
+  // --- INTERACTION OVERLAY (hover along curve) ---
+  svg
+    .append("rect")
+    .attr("x", margin.left)
+    .attr("y", margin.top)
+    .attr("width", width - margin.left - margin.right)
+    .attr("height", height - margin.top - margin.bottom)
+    .attr("fill", "transparent")
+    .on("mousemove", function(event) {
+      const [mx] = d3.pointer(event, this);
+      const year = Math.round(x.invert(mx));
+      const clamped = Math.max(minYear, Math.min(maxYear, year));
+      const pt = getYearPoint(data, clamped);
+      if (!pt) return;
 
-        // Move marker to follow mouse
-        marker.attr("x1", x(clamped)).attr("x2", x(clamped));
+      // marker follows mouse (acts like a draggable time marker)
+      marker.attr("x1", x(clamped)).attr("x2", x(clamped));
 
-        const scenarioKey = selectedScenario.value === "all" 
-          ? "ssp245_mm"  // Default to moderate if showing all
-          : selectedScenario.value;
-        const scenarioLabel = selectedScenario.value === "all"
-          ? "Moderate (SSP2-4.5)"
-          : selectedScenario.label;
-        
-        // US Average data
-        const avgValueMm = pt[scenarioKey];
-        const avgValueCm = avgValueMm / 10;
+      const scenarioLabel = selectedScenario.label;
+      const valueMm = pt[selectedScenario.value];
+      const valueCm = valueMm / 10;
 
-        // Approximate rate of change (forward difference)
-        const nextPt = getYearPoint(filteredData, clamped + 10) || pt;
-        const slopeMmPerDecade = nextPt[scenarioKey] - pt[scenarioKey];
+      // approximate rate of change (forward difference)
+      const nextPt = getYearPoint(data, clamped + 10) || pt;
+      const slopeMmPerDecade = nextPt[selectedScenario.value] - pt[selectedScenario.value];
 
-        // Get uncertainty bounds for US average
-        const lowerKey = scenarioKey.replace('_mm', '_lower');
-        const upperKey = scenarioKey.replace('_mm', '_upper');
-        const avgLowerCm = (pt[lowerKey] || avgValueMm) / 10;
-        const avgUpperCm = (pt[upperKey] || avgValueMm) / 10;
+      showTooltip(
+        `
+        <strong>${clamped}</strong><br/>
+        ${scenarioLabel}<br/>
+        Rise: <strong>${valueCm.toFixed(1)} cm</strong><br/>
+        Rate: ${(slopeMmPerDecade / 10).toFixed(1)} mm/yr
+      `,
+        event
+      );
+    })
+    .on("mouseleave", function() {
+      hideTooltip();
+      // reset marker to the slider-selected horizon
+      marker.attr("x1", x(selectedYear)).attr("x2", x(selectedYear));
+    });
 
-        // If city is selected, also show city data
-        let tooltipHtml = `<strong>${clamped}</strong><br/>${scenarioLabel}<br/>`;
-        
-        if (filteredCityData && filteredCityData.length > 0) {
-          // Get city data point with uncertainty
-          const cityPt = getYearPoint(filteredCityData, clamped);
-          if (cityPt) {
-            const cityValueMm = cityPt[scenarioKey];
-            const cityValueCm = cityValueMm / 10;
-            const cityLowerCm = (cityPt[lowerKey] || cityValueMm) / 10;
-            const cityUpperCm = (cityPt[upperKey] || cityValueMm) / 10;
-            const diff = ((cityValueMm - avgValueMm) / avgValueMm * 100).toFixed(0);
-            
-            tooltipHtml += `
-              <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #e5e7eb;">
-                <strong style="color: #1e293b;">${cityData.name}:</strong><br/>
-                Rise: <strong>${cityValueCm.toFixed(1)} cm</strong>
-                <span style="color: ${diff > 0 ? '#ef4444' : '#22c55e'}; font-size: 12px;">
-                  (${diff > 0 ? '+' : ''}${diff}%)
-                </span><br/>
-                <span style="font-size: 11px; color: #64748b;">Range: ${cityLowerCm.toFixed(1)}–${cityUpperCm.toFixed(1)} cm</span>
-              </div>
-            `;
-          }
-        }
-        
-        tooltipHtml += `
-          <div style="margin-top: 6px; padding-top: 6px; ${filteredCityData ? 'border-top: 1px solid #e5e7eb;' : ''}">
-            <strong style="color: #1e293b;">US Average:</strong><br/>
-            Rise: <strong>${avgValueCm.toFixed(1)} cm</strong><br/>
-            <span style="font-size: 11px; color: #64748b;">Range: ${avgLowerCm.toFixed(1)}–${avgUpperCm.toFixed(1)} cm</span><br/>
-            Rate: ${(slopeMmPerDecade / 10).toFixed(1)} mm/yr
-          </div>
-        `;
-
-        showTooltip(tooltipHtml, event);
-      })
-      .on("mouseleave", function() {
-        hideTooltip();
-        // Reset marker to slider-selected year
-        marker.attr("x1", x(selectedYear)).attr("x2", x(selectedYear));
-      });
-  }
-
-  // --- EVENT MARKERS (only show if matching scenario and within year range) ---
+  // --- EVENT THRESHOLDS (horizontal lines + marker) ---
   const eventGroup = svg.append("g");
 
   const filteredEvents = events.filter(ev => {
@@ -624,18 +542,31 @@ function seaLevelLineChart(
     const ex = x(ev.year);
     const ey = y(yVal);
 
-    // Little diamond marker
+    // horizontal threshold line across the chart
     eventGroup
-      .append("rect")
-      .attr("x", ex - 5)
-      .attr("y", ey - 5)
-      .attr("width", 10)
-      .attr("height", 10)
-      .attr("transform", `rotate(45,${ex},${ey})`)
+      .append("line")
+      .attr("x1", margin.left)
+      .attr("x2", width - margin.right)
+      .attr("y1", ey)
+      .attr("y2", ey)
+      .attr("stroke", "#ea580c")
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", "4 4")
+      .attr("opacity", 0.75);
+
+    // small circle at the scenario intersection
+    const markerCircle = eventGroup
+      .append("circle")
+      .attr("cx", ex)
+      .attr("cy", ey)
+      .attr("r", 4)
       .attr("fill", "#ea580c")
       .attr("stroke", "white")
       .attr("stroke-width", 1.2)
-      .style("cursor", "pointer")
+      .style("cursor", "pointer");
+
+    // interaction on the circle (line is just visual)
+    markerCircle
       .on("mouseover", function(event) {
         event.stopPropagation();
         showTooltip(
@@ -666,7 +597,7 @@ function seaLevelLineChart(
   // --- LEGEND (next to chart) ---
   const legend = svg
     .append("g")
-    .attr("transform", `translate(${width - margin.right + 20}, ${margin.top + 10})`);
+    .attr("transform", `translate(${width - margin.right - 160}, ${margin.top})`);
 
   // Legend title
   legend.append("text")
