@@ -457,6 +457,12 @@ const showAllScenarios = view(Inputs.toggle({
   label: "Compare all emission scenarios", 
   value: false
 }));
+
+// Toggle to show/hide US average
+const showUSAverage = view(Inputs.toggle({
+  label: "Show US average", 
+  value: true
+}));
 ```
 
 ```js
@@ -552,12 +558,7 @@ const scenarioRange = currentYearData ? (() => {
 </div>
 
 ```js
-// Event markers for historical context
-const events = [
-  { year: 2050, scenario: "ssp119_mm", label: "Paris Agreement 1.5°C target" },
-  { year: 2100, scenario: "ssp245_mm", label: "End of century baseline" },
-  { year: 2100, scenario: "ssp585_mm", label: "High emissions endpoint" }
-];
+
 
 function getYearPoint(data, year) {
   // Exact match if available
@@ -599,7 +600,7 @@ function getYearPoint(data, year) {
 ```
 
 ```js
-function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYear, showAll } = {}) {
+function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYear, showAll, showUSAverage = true } = {}) {
   const height = 500;
   const margin = { top: 40, right: 200, bottom: 50, left: 60 };
 
@@ -696,35 +697,39 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
   const uncertaintyGroup = svg.append("g").attr("class", "uncertainty-bands");
   const linesGroup = svg.append("g").attr("class", "median-lines");
 
-  // Draw uncertainty bands
-  scenarios.forEach(s => {
-    uncertaintyGroup.append("path")
-      .datum(filteredData)
-      .attr("fill", s.color)
-      .attr("opacity", 0.15)
-      .attr("d", areaGen(s.lower, s.upper))
-      .append("title")
-      .text(`${s.label} uncertainty range (17th-83rd percentile)`);
-  });
+  // Draw uncertainty bands (only if showUSAverage is true)
+  if (showUSAverage) {
+    scenarios.forEach(s => {
+      uncertaintyGroup.append("path")
+        .datum(filteredData)
+        .attr("fill", s.color)
+        .attr("opacity", 0.15)
+        .attr("d", areaGen(s.lower, s.upper))
+        .append("title")
+        .text(`${s.label} uncertainty range (17th-83rd percentile)`);
+    });
+  }
 
-  // Draw median lines
-  scenarios.forEach(s => {
-    const path = linesGroup.append("path")
-      .datum(filteredData)
-      .attr("fill", "none")
-      .attr("stroke", s.color)
-      .attr("stroke-width", 3)
-      .attr("opacity", 1)
-      .attr("d", lineGen(s.key));
+  // Draw median lines (only if showUSAverage is true)
+  if (showUSAverage) {
+    scenarios.forEach(s => {
+      const path = linesGroup.append("path")
+        .datum(filteredData)
+        .attr("fill", "none")
+        .attr("stroke", s.color)
+        .attr("stroke-width", 3)
+        .attr("opacity", 1)
+        .attr("d", lineGen(s.key));
 
-    const totalLength = path.node().getTotalLength();
-    path.attr("stroke-dasharray", `${totalLength} ${totalLength}`)
-      .attr("stroke-dashoffset", totalLength)
-      .transition()
-      .duration(900)
-      .ease(d3.easeCubicOut)
-      .attr("stroke-dashoffset", 0);
-  });
+      const totalLength = path.node().getTotalLength();
+      path.attr("stroke-dasharray", `${totalLength} ${totalLength}`)
+        .attr("stroke-dashoffset", totalLength)
+        .transition()
+        .duration(900)
+        .ease(d3.easeCubicOut)
+        .attr("stroke-dashoffset", 0);
+    });
+  }
 
   // City overlay
   if (filteredCityData && filteredCityData.length > 0) {
@@ -915,48 +920,7 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
       });
   }
 
-  // Event markers
-  const eventGroup = svg.append("g");
-  const filteredEvents = events.filter(ev => {
-    const matchesScenario = showAll || ev.scenario === (selectedScenario + "_mm");
-    const inYearRange = ev.year <= selectedYear && ev.year >= minYear;
-    return matchesScenario && inYearRange;
-  });
-
-  filteredEvents.forEach(ev => {
-    const pt = getYearPoint(filteredData, ev.year);
-    if (!pt) return;
-
-    const yVal = pt[ev.scenario];
-    if (yVal == null) return;
-
-    const ex = x(ev.year);
-    const ey = y(yVal);
-
-    eventGroup.append("rect")
-      .attr("x", ex - 5)
-      .attr("y", ey - 5)
-      .attr("width", 10)
-      .attr("height", 10)
-      .attr("transform", `rotate(45,${ex},${ey})`)
-      .attr("fill", "#ea580c")
-      .attr("stroke", "white")
-      .attr("stroke-width", 1.2)
-      .style("cursor", "pointer")
-      .on("mouseover", function(event) {
-        event.stopPropagation();
-        showTooltip(`<strong>${ev.year}</strong><br/>Event: ${ev.label}`, event);
-      })
-      .on("mouseout", function(event) {
-        event.stopPropagation();
-        hideTooltip();
-      })
-      .on("click", function(event) {
-        event.stopPropagation();
-        showTooltip(`<strong>${ev.year}</strong><br/>${ev.label}<br/>Scenario: ${ev.scenario.toUpperCase().replace("_MM", "")}`, event);
-      });
-  });
-
+  
   // Legend
   const legend = svg.append("g")
     .attr("transform", `translate(${width - margin.right + 20}, ${margin.top + 10})`);
@@ -971,30 +935,33 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
 
   let yOffset = 20;
 
-  legend.append("text")
-    .attr("x", 0)
-    .attr("y", yOffset)
-    .attr("font-size", 12)
-    .attr("fill", "#6b7280")
-    .text("US Average:");
-  yOffset += 16;
-
-  allScenarios.forEach(s => {
-    if (!showAll && s.key !== selectedScenario + "_mm") return;
-    
-    const row = legend.append("g").attr("transform", `translate(0, ${yOffset})`);
-    row.append("line")
-      .attr("x1", 0).attr("x2", 24)
-      .attr("y1", 0).attr("y2", 0)
-      .attr("stroke", s.color)
-      .attr("stroke-width", 2.5);
-    row.append("text")
-      .attr("x", 30).attr("y", 4)
+  // Only show US Average legend if showUSAverage is true
+  if (showUSAverage) {
+    legend.append("text")
+      .attr("x", 0)
+      .attr("y", yOffset)
       .attr("font-size", 12)
-      .attr("fill", "#374151")
-      .text(s.label);
+      .attr("fill", "#6b7280")
+      .text("US Average:");
     yOffset += 16;
-  });
+
+    allScenarios.forEach(s => {
+      if (!showAll && s.key !== selectedScenario + "_mm") return;
+      
+      const row = legend.append("g").attr("transform", `translate(0, ${yOffset})`);
+      row.append("line")
+        .attr("x1", 0).attr("x2", 24)
+        .attr("y1", 0).attr("y2", 0)
+        .attr("stroke", s.color)
+        .attr("stroke-width", 2.5);
+      row.append("text")
+        .attr("x", 30).attr("y", 4)
+        .attr("font-size", 12)
+        .attr("fill", "#374151")
+        .text(s.label);
+      yOffset += 16;
+    });
+  }
 
   if (filteredCityData && filteredCityData.length > 0) {
     yOffset += 8;
@@ -1062,13 +1029,19 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
 }
 ```
 
+<div style="display: flex; gap: 20px; align-items: center; margin: 16px 0;">
+  ${showAllScenarios}
+  ${showUSAverage}
+</div>
+
 <div class="card">
   ${resize(width => seaLevelLineChart(usAvg, {
     width,
     cityData: selectedCityData,
     selectedScenario: selectedScenario.value,
     selectedYear: selectedYear,
-    showAll: showAllScenarios
+    showAll: showAllScenarios,
+    showUSAverage: showUSAverage
   }))}
 </div>
 
