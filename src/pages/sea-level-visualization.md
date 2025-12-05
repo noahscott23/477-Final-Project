@@ -904,7 +904,7 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
               <div style="margin-top: ${idx === 0 ? 8 : 6}px; padding-top: 6px; ${idx > 0 ? 'border-top: 1px solid #e5e7eb;' : ''}">
                 <strong style="color: ${scenario.color};">${scenario.label}</strong><br/>
                 <strong>US Avg:</strong> ${avgValueCm.toFixed(1)} cm
-                <span style="font-size: 11px; color: #64748b;">(${avgLowerCm.toFixed(1)}–${avgUpperCm.toFixed(1)} cm)</span>
+                <span style="font-size: 12px; color: #64748b;">(${avgLowerCm.toFixed(1)}–${avgUpperCm.toFixed(1)} cm)</span>
             `;
             
             if (filteredCityData && filteredCityData.length > 0) {
@@ -1048,7 +1048,7 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
   legend.append("text")
     .attr("x", 0)
     .attr("y", yOffset)
-    .attr("font-size", 10)
+    .attr("font-size", 12)
     .attr("fill", "#6b7280")
     .text("US Average:");
   yOffset += 16;
@@ -1064,7 +1064,7 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
       .attr("stroke-width", 2.5);
     row.append("text")
       .attr("x", 30).attr("y", 4)
-      .attr("font-size", 10)
+      .attr("font-size", 12)
       .attr("fill", "#374151")
       .text(s.label);
     yOffset += 16;
@@ -1074,7 +1074,7 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
     yOffset += 8;
     legend.append("text")
       .attr("x", 0).attr("y", yOffset)
-      .attr("font-size", 10)
+      .attr("font-size", 12)
       .attr("fill", "#6b7280")
       .text(`${cityData.name}:`);
     yOffset += 16;
@@ -1089,7 +1089,7 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
         .attr("stroke-dasharray", "4 2");
       row.append("text")
         .attr("x", 30).attr("y", 4)
-        .attr("font-size", 10)
+        .attr("font-size", 12)
         .attr("fill", "#374151")
         .text(s.label);
       yOffset += 16;
@@ -1099,7 +1099,7 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
   yOffset += 12;
   legend.append("text")
     .attr("x", 0).attr("y", yOffset)
-    .attr("font-size", 10)
+    .attr("font-size", 12)
     .attr("fill", "#6b7280")
     .text("Uncertainty:");
   yOffset += 16;
@@ -1113,21 +1113,22 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
       .attr("opacity", 0.15);
     row.append("text")
       .attr("x", 30).attr("y", 0)
-      .attr("font-size", 9)
+      .attr("font-size", 11)
       .attr("fill", "#374151")
       .text(s.label);
-    yOffset += 14;
+    yOffset += 20;
   });
+
 
   legend.append("text")
     .attr("x", 0).attr("y", yOffset)
-    .attr("font-size", 8)
+    .attr("font-size", 10)
     .attr("fill", "#9ca3af")
     .text("17th-83rd percentile");
-  yOffset += 10;
+  yOffset += 12;
   legend.append("text")
     .attr("x", 0).attr("y", yOffset)
-    .attr("font-size", 8)
+    .attr("font-size", 10)
     .attr("fill", "#9ca3af")
     .text("(~66% confidence)");
 
