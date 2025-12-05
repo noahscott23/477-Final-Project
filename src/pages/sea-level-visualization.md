@@ -457,12 +457,6 @@ const showAllScenarios = view(Inputs.toggle({
   label: "Compare all emission scenarios", 
   value: false
 }));
-
-// Toggle to show/hide US average lines
-const showUSAverage = view(Inputs.toggle({
-  label: "Show US average", 
-  value: true
-}));
 ```
 
 ```js
@@ -513,15 +507,15 @@ const scenarioRange = currentYearData ? (() => {
 
 <div class="grid grid-cols-3">
   <div class="card">
-    <h2 id="hover-year-title">Rise by ${selectedYear}</h2>
-    <span class="big" id="hover-value-display">${currentRise ? (currentRise / 10).toFixed(1) : '—'} cm</span>
+    <h2>Rise by ${selectedYear}</h2>
+    <span class="big">${currentRise ? (currentRise / 10).toFixed(1) : '—'} cm</span>
     <span class="label">US average</span>
-    <p id="hover-range-display" style="font-size: 12px; color: #64748b; margin-top: 4px;">${currentYearData ? `Range: ${(currentYearData[selectedScenario.value + '_lower'] / 10).toFixed(1)}–${(currentYearData[selectedScenario.value + '_upper'] / 10).toFixed(1)} cm` : ''}</p>
+    ${currentYearData ? html`<p style="font-size: 12px; color: #64748b; margin-top: 4px;">Range: ${(currentYearData[selectedScenario.value + '_lower'] / 10).toFixed(1)}–${(currentYearData[selectedScenario.value + '_upper'] / 10).toFixed(1)} cm</p>` : ''}
   </div>
   <div class="card">
     <h2>Average Rate</h2>
-    <span class="big" id="hover-rate-display">${avgRate ? (avgRate / 10).toFixed(1) : '—'} mm/yr</span>
-    <span class="label" id="hover-rate-label">2020–${selectedYear}</span>
+    <span class="big">${avgRate ? (avgRate / 10).toFixed(1) : '—'} mm/yr</span>
+    <span class="label">2020–${selectedYear}</span>
   </div>
   <div class="card">
     ${selectedCityData ? html`
@@ -537,10 +531,10 @@ const scenarioRange = currentYearData ? (() => {
       </span>
     ` : showAllScenarios && scenarioRange ? html`
       <h2>Scenario Range</h2>
-      <span class="big" id="hover-scenario-range">${scenarioRange.range.toFixed(1)} cm</span>
-      <span class="label" id="hover-scenario-label">
-        Low: <span id="hover-scenario-low">${scenarioRange.lowRise.toFixed(1)}</span> cm
-        <br/>High: <span id="hover-scenario-high">${scenarioRange.highRise.toFixed(1)}</span> cm
+      <span class="big">${scenarioRange.range.toFixed(1)} cm</span>
+      <span class="label">
+        Low: ${scenarioRange.lowRise.toFixed(1)} cm
+        <br/>High: ${scenarioRange.highRise.toFixed(1)} cm
       </span>
     ` : mostAtRiskCity ? html`
       <h2>Highest Risk City</h2>
@@ -558,11 +552,19 @@ const scenarioRange = currentYearData ? (() => {
 </div>
 
 ```js
+// Event markers for historical context
+const events = [
+  { year: 2050, scenario: "ssp119_mm", label: "Paris Agreement 1.5°C target" },
+  { year: 2100, scenario: "ssp245_mm", label: "End of century baseline" },
+  { year: 2100, scenario: "ssp585_mm", label: "High emissions endpoint" }
+];
+
 function getYearPoint(data, year) {
   // Exact match if available
   let exact = data.find(d => d.year === year);
   if (exact) return exact;
 
+  // Otherwise interpolate between nearest years
   const sorted = data.slice().sort((a, b) => a.year - b.year);
   const before = d3.max(sorted.filter(d => d.year < year), d => d.year);
   const after = d3.min(sorted.filter(d => d.year > year), d => d.year);
@@ -597,9 +599,9 @@ function getYearPoint(data, year) {
 ```
 
 ```js
-function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYear, showAll, showUSAverage } = {}) {
+function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYear, showAll } = {}) {
   const height = 500;
-  const margin = { top: 80, right: 200, bottom: 50, left: 120 };
+  const margin = { top: 40, right: 200, bottom: 50, left: 60 };
 
   const svg = d3.create("svg")
     .attr("width", width)
@@ -636,13 +638,11 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
     .attr("fill", "#eff6ff");
 
   svg.append("text")
-    .attr("x", width / 2)
-    .attr("y", 30)
-    .attr("text-anchor", "middle")
+    .attr("x", x(projectionStart) + 6)
+    .attr("y", margin.top + 16)
     .attr("fill", "#1d4ed8")
-    .attr("font-size", 20)
-    .attr("font-weight", "600")
-    .text("IPCC AR6 Sea Level Rise Projections (2020–2150)");
+    .attr("font-size", 12)
+    .text("IPCC AR6 Projections (2020–2150)");
 
   // Axes
   const xAxis = d3.axisBottom(x).tickFormat(d3.format("d"));
@@ -663,23 +663,13 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
     .attr("font-size", 12)
     .text("Year");
 
-  const yAxisLabel = svg
-    .append("g")
-    .attr("transform", `translate(${margin.left - 80}, ${height / 2})`);
-  
-  yAxisLabel
-    .append("text")
+  svg.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", 20)
     .attr("text-anchor", "middle")
     .attr("font-size", 12)
-    .attr("dy", "-0.5em")
-    .text("Sea Level");
-  
-  yAxisLabel
-    .append("text")
-    .attr("text-anchor", "middle")
-    .attr("font-size", 12)
-    .attr("dy", "0.5em")
-    .text("Rise (mm)");
+    .text("Sea Level Rise (mm)");
 
   // Scenario definitions
   const allScenarios = [
@@ -706,39 +696,35 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
   const uncertaintyGroup = svg.append("g").attr("class", "uncertainty-bands");
   const linesGroup = svg.append("g").attr("class", "median-lines");
 
-  // Draw uncertainty bands (only if showUSAverage is true)
-  if (showUSAverage) {
-    scenarios.forEach(s => {
-      uncertaintyGroup.append("path")
-        .datum(filteredData)
-        .attr("fill", s.color)
-        .attr("opacity", 0.15)
-        .attr("d", areaGen(s.lower, s.upper))
-        .append("title")
-        .text(`${s.label} uncertainty range (17th-83rd percentile)`);
-    });
-  }
+  // Draw uncertainty bands
+  scenarios.forEach(s => {
+    uncertaintyGroup.append("path")
+      .datum(filteredData)
+      .attr("fill", s.color)
+      .attr("opacity", 0.15)
+      .attr("d", areaGen(s.lower, s.upper))
+      .append("title")
+      .text(`${s.label} uncertainty range (17th-83rd percentile)`);
+  });
 
-  // Draw median lines (only if showUSAverage is true)
-  if (showUSAverage) {
-    scenarios.forEach(s => {
-      const path = linesGroup.append("path")
-        .datum(filteredData)
-        .attr("fill", "none")
-        .attr("stroke", s.color)
-        .attr("stroke-width", 3)
-        .attr("opacity", 1)
-        .attr("d", lineGen(s.key));
+  // Draw median lines
+  scenarios.forEach(s => {
+    const path = linesGroup.append("path")
+      .datum(filteredData)
+      .attr("fill", "none")
+      .attr("stroke", s.color)
+      .attr("stroke-width", 3)
+      .attr("opacity", 1)
+      .attr("d", lineGen(s.key));
 
-      const totalLength = path.node().getTotalLength();
-      path.attr("stroke-dasharray", `${totalLength} ${totalLength}`)
-        .attr("stroke-dashoffset", totalLength)
-        .transition()
-        .duration(900)
-        .ease(d3.easeCubicOut)
-        .attr("stroke-dashoffset", 0);
-    });
-  }
+    const totalLength = path.node().getTotalLength();
+    path.attr("stroke-dasharray", `${totalLength} ${totalLength}`)
+      .attr("stroke-dashoffset", totalLength)
+      .transition()
+      .duration(900)
+      .ease(d3.easeCubicOut)
+      .attr("stroke-dashoffset", 0);
+  });
 
   // City overlay
   if (filteredCityData && filteredCityData.length > 0) {
@@ -780,6 +766,7 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
   const marker = svg.append("line")
     .attr("stroke", "#2563eb")
     .attr("stroke-width", 2)
+    .attr("stroke-dasharray", "4 2")
     .attr("y1", margin.top)
     .attr("y2", height - margin.bottom)
     .attr("x1", x(selectedYear))
@@ -821,7 +808,7 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
       .attr("height", height - margin.top - margin.bottom)
       .attr("fill", "transparent")
       .on("mousemove", function(event) {
-        const [mx] = d3.pointer(event, this);
+        const [mx] = d3.pointer(event);
         const hoveredYear = Math.round(x.invert(mx));
         const clamped = Math.max(minYear, Math.min(maxYear, hoveredYear));
         
@@ -829,58 +816,6 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
         
         const pt = getYearPoint(filteredData, clamped);
         if (!pt) return;
-
-        // Update card displays
-        const yearTitle = document.getElementById("hover-year-title");
-        const valueDisplay = document.getElementById("hover-value-display");
-        const rangeDisplay = document.getElementById("hover-range-display");
-        const rateDisplay = document.getElementById("hover-rate-display");
-        const rateLabel = document.getElementById("hover-rate-label");
-        const scenarioRange = document.getElementById("hover-scenario-range");
-        const scenarioLabel = document.getElementById("hover-scenario-label");
-        const scenarioLow = document.getElementById("hover-scenario-low");
-        const scenarioHigh = document.getElementById("hover-scenario-high");
-        
-        if (yearTitle) yearTitle.textContent = `Rise by ${clamped}`;
-        
-        if (valueDisplay) {
-          const scenarioKey = showAll ? "ssp245_mm" : selectedScenario + "_mm";
-          const avgPoint = getYearPoint(data, clamped);
-          if (avgPoint) {
-            const value = (avgPoint[scenarioKey] / 10).toFixed(1);
-            valueDisplay.textContent = `${value} cm`;
-            
-            if (rangeDisplay && avgPoint[scenarioKey.replace('_mm', '_lower')] != null) {
-              const lower = (avgPoint[scenarioKey.replace('_mm', '_lower')] / 10).toFixed(1);
-              const upper = (avgPoint[scenarioKey.replace('_mm', '_upper')] / 10).toFixed(1);
-              rangeDisplay.textContent = `Range: ${lower}–${upper} cm`;
-            }
-          }
-        }
-
-        if (rateDisplay && rateLabel) {
-          const scenarioKey = showAll ? "ssp245_mm" : selectedScenario + "_mm";
-          const baselineData = data.find(d => d.year === 2020);
-          const currentData = getYearPoint(data, clamped);
-          if (baselineData && currentData && currentData[scenarioKey] != null) {
-            const yearsPassed = clamped - 2020;
-            const avgRate = yearsPassed > 0 ? ((currentData[scenarioKey] - baselineData[scenarioKey]) / yearsPassed) : 0;
-            rateDisplay.textContent = avgRate > 0 ? `${(avgRate / 10).toFixed(1)} mm/yr` : '—';
-            rateLabel.textContent = `2020–${clamped}`;
-          }
-        }
-
-        if (showAll && scenarioRange && scenarioLow && scenarioHigh) {
-          const currentData = getYearPoint(data, clamped);
-          if (currentData) {
-            const lowRise = (currentData.ssp119_mm / 10).toFixed(1);
-            const highRise = (currentData.ssp585_mm / 10).toFixed(1);
-            const range = (parseFloat(highRise) - parseFloat(lowRise)).toFixed(1);
-            scenarioRange.textContent = `${range} cm`;
-            scenarioLow.textContent = lowRise;
-            scenarioHigh.textContent = highRise;
-          }
-        }
 
         let tooltipHtml = `<strong style="font-size: 14px;">📍 Year ${clamped}</strong><br/>`;
         
@@ -977,59 +912,50 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
       .on("mouseleave", function() {
         hideTooltip();
         marker.attr("x1", x(selectedYear)).attr("x2", x(selectedYear));
-        
-        // Reset card displays
-        const yearTitle = document.getElementById("hover-year-title");
-        const valueDisplay = document.getElementById("hover-value-display");
-        const rangeDisplay = document.getElementById("hover-range-display");
-        const rateDisplay = document.getElementById("hover-rate-display");
-        const rateLabel = document.getElementById("hover-rate-label");
-        const scenarioRange = document.getElementById("hover-scenario-range");
-        const scenarioLow = document.getElementById("hover-scenario-low");
-        const scenarioHigh = document.getElementById("hover-scenario-high");
-        
-        if (yearTitle) yearTitle.textContent = `Rise by ${selectedYear}`;
-        
-        if (valueDisplay) {
-          const scenarioKey = showAll ? "ssp245_mm" : selectedScenario + "_mm";
-          const avgPoint = getYearPoint(data, selectedYear);
-          if (avgPoint) {
-            const value = (avgPoint[scenarioKey] / 10).toFixed(1);
-            valueDisplay.textContent = `${value} cm`;
-            
-            if (rangeDisplay && avgPoint[scenarioKey.replace('_mm', '_lower')] != null) {
-              const lower = (avgPoint[scenarioKey.replace('_mm', '_lower')] / 10).toFixed(1);
-              const upper = (avgPoint[scenarioKey.replace('_mm', '_upper')] / 10).toFixed(1);
-              rangeDisplay.textContent = `Range: ${lower}–${upper} cm`;
-            }
-          }
-        }
-
-        if (rateDisplay && rateLabel) {
-          const scenarioKey = showAll ? "ssp245_mm" : selectedScenario + "_mm";
-          const baselineData = data.find(d => d.year === 2020);
-          const currentData = data.find(d => d.year === selectedYear);
-          if (baselineData && currentData && currentData[scenarioKey] != null) {
-            const yearsPassed = selectedYear - 2020;
-            const avgRate = yearsPassed > 0 ? ((currentData[scenarioKey] - baselineData[scenarioKey]) / yearsPassed) : 0;
-            rateDisplay.textContent = avgRate > 0 ? `${(avgRate / 10).toFixed(1)} mm/yr` : '—';
-            rateLabel.textContent = `2020–${selectedYear}`;
-          }
-        }
-
-        if (showAll && scenarioRange && scenarioLow && scenarioHigh) {
-          const currentData = data.find(d => d.year === selectedYear);
-          if (currentData) {
-            const lowRise = (currentData.ssp119_mm / 10).toFixed(1);
-            const highRise = (currentData.ssp585_mm / 10).toFixed(1);
-            const range = (parseFloat(highRise) - parseFloat(lowRise)).toFixed(1);
-            scenarioRange.textContent = `${range} cm`;
-            scenarioLow.textContent = lowRise;
-            scenarioHigh.textContent = highRise;
-          }
-        }
       });
   }
+
+  // Event markers
+  const eventGroup = svg.append("g");
+  const filteredEvents = events.filter(ev => {
+    const matchesScenario = showAll || ev.scenario === (selectedScenario + "_mm");
+    const inYearRange = ev.year <= selectedYear && ev.year >= minYear;
+    return matchesScenario && inYearRange;
+  });
+
+  filteredEvents.forEach(ev => {
+    const pt = getYearPoint(filteredData, ev.year);
+    if (!pt) return;
+
+    const yVal = pt[ev.scenario];
+    if (yVal == null) return;
+
+    const ex = x(ev.year);
+    const ey = y(yVal);
+
+    eventGroup.append("rect")
+      .attr("x", ex - 5)
+      .attr("y", ey - 5)
+      .attr("width", 10)
+      .attr("height", 10)
+      .attr("transform", `rotate(45,${ex},${ey})`)
+      .attr("fill", "#ea580c")
+      .attr("stroke", "white")
+      .attr("stroke-width", 1.2)
+      .style("cursor", "pointer")
+      .on("mouseover", function(event) {
+        event.stopPropagation();
+        showTooltip(`<strong>${ev.year}</strong><br/>Event: ${ev.label}`, event);
+      })
+      .on("mouseout", function(event) {
+        event.stopPropagation();
+        hideTooltip();
+      })
+      .on("click", function(event) {
+        event.stopPropagation();
+        showTooltip(`<strong>${ev.year}</strong><br/>${ev.label}<br/>Scenario: ${ev.scenario.toUpperCase().replace("_MM", "")}`, event);
+      });
+  });
 
   // Legend
   const legend = svg.append("g")
@@ -1142,8 +1068,7 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
     cityData: selectedCityData,
     selectedScenario: selectedScenario.value,
     selectedYear: selectedYear,
-    showAll: showAllScenarios,
-    showUSAverage: showUSAverage
+    showAll: showAllScenarios
   }))}
 </div>
 
