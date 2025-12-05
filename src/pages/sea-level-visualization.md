@@ -602,7 +602,7 @@ function getYearPoint(data, year) {
 ```js
 function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYear, showAll, showUSAverage = true } = {}) {
   const height = 500;
-  const margin = { top: 40, right: 200, bottom: 50, left: 60 };
+  const margin = { top: 40, right: 200, bottom: 50, left: 100 };
 
   const svg = d3.create("svg")
     .attr("width", width)
@@ -664,13 +664,24 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
     .attr("font-size", 12)
     .text("Year");
 
-  svg.append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -height / 2)
-    .attr("y", 20)
-    .attr("text-anchor", "middle")
-    .attr("font-size", 12)
-    .text("Sea Level Rise (mm)");
+const yLabelX = margin.left - 90; 
+const yLabelY = margin.top + 200;   
+
+const yLabel = svg.append("text")
+  .attr("x", yLabelX)
+  .attr("y", yLabelY)
+  .attr("font-size", 12)
+  .attr("text-anchor", "start");
+
+yLabel.append("tspan")
+  .attr("x", yLabelX)
+  .attr("dy", 0)
+  .text("Sea Level");
+
+yLabel.append("tspan")
+  .attr("x", yLabelX)
+  .attr("dy", "1.2em")
+  .text("Rise (mm)");
 
   // Scenario definitions
   const allScenarios = [
@@ -1028,11 +1039,6 @@ function seaLevelLineChart(data, { width, cityData, selectedScenario, selectedYe
   return svg.node();
 }
 ```
-
-<div style="display: flex; gap: 20px; align-items: center; margin: 16px 0;">
-  ${showAllScenarios}
-  ${showUSAverage}
-</div>
 
 <div class="card">
   ${resize(width => seaLevelLineChart(usAvg, {
