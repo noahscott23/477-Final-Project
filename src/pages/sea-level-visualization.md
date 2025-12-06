@@ -520,7 +520,7 @@ const scenarioRange = currentYearData ? (() => {
   </div>
   <div class="card">
     <h2>Average Rate</h2>
-    <span class="big">${avgRate ? (avgRate / 10).toFixed(1) : '—'} mm/yr</span>
+    <span class="big">${avgRate ? (avgRate / 10).toFixed(1) : '—'} cm/yr</span>
     <span class="label">2020–${selectedYear}</span>
   </div>
   <div class="card">
